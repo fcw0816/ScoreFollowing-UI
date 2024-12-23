@@ -1,0 +1,4 @@
+1.conda create -n env_test python=3.8
+
+2.pip install -r requirement.txt
+

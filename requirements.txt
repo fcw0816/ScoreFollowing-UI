@@ -1,0 +1,22 @@
+Cython
+librosa==0.9.0
+natsort==8.4.0
+numba==0.56.4
+numpy==1.21.6
+oauthlib==3.2.2
+opencv-contrib-python==4.10.0.84
+opencv-python==4.10.0.84
+pandas==1.3.5
+PyAudio==0.2.13
+pyqt5-sip==12.11.0
+PyQt5
+scikit-learn==1.0.2
+seaborn==0.12.2
+ultralytics==8.0.145
+
+--extra-index-url https://download.pytorch.org/whl/cu117
+torch==1.13.1+cu117
+--extra-index-url https://download.pytorch.org/whl/cu117
+torchaudio==0.13.1
+--extra-index-url https://download.pytorch.org/whl/cu117
+torchvision==0.14.1+cu117

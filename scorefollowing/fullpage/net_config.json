@@ -1,0 +1,7 @@
+{"nc": 1, 
+"groupnorm": true, 
+"encodertype": "transformer", 
+"encoder": {"type": "ContextConditioning", 
+"params": {"n_lstm_layers": 1, "activation": "nn.ELU", "zdim": 128, "normalize_input": true}}, 
+"anchors": [[11, 26, 11, 34, 11, 45]], 
+"backbone": [[-1, "Conv", [16, 3]], [-1, "Conv", [32, 3, 2]], [-1, "C2f", [64, true]], [-1, "Conv", [64, 3, 2]], [-1, "C2f", [64, true]], [-1, "FiLMConv", [128, 3, 2]], [-1, "C2f", [128, true]], [-1, "FiLMConv", [128, 3, 2]], [-1, "C2f", [128, true]]], "head": [[-1, "FiLMConv", [128, 3, 1]], [-1, "nn.Upsample", ["None", 2, "nearest"]], [[-1, 6], "Concat", [1]], [-1, "C2f", [128]], [-1, "FiLMConv", [128, 3, 1]], [-1, "nn.Upsample", ["None", 2, "nearest"]], [[-1, 4], "Concat", [1]], [-1, "C2f", [128]], [[16], "Detect", ["nc", "anchors"]]]}

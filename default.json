@@ -1,0 +1,9 @@
+{
+    "MotifLabel":"motiflabel",
+    "Audio":"audio",
+    "Piece":"test_score",
+    "CroppingPiece":"cropping_score",
+    "Save":"save",
+    "OMRModel":"omr\\best.pt",
+    "ScoreFollowingModel":"scorefollowing"
+    }
