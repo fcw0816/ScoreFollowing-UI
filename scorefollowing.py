@@ -48,6 +48,7 @@ class ScoreFollowing(QThread):
         
         self.actual_page = 0
         self.current_system = 0
+        
         # audio file or stream
         self.audio_stream = AudioStream(SAMPLE_RATE, HOP_SIZE*2, self.audio_path)
             
@@ -55,6 +56,8 @@ class ScoreFollowing(QThread):
         self.th_len = 5
         self.curr_y = deque(np.zeros(self.th_len), maxlen=self.th_len)
         self.curr_x = deque(np.zeros(self.th_len), maxlen=self.th_len)
+        self.mean_x = 0
+        self.mean_y = 0
         self.bipage_count = 40
         self.cooldown = 0
         
@@ -141,11 +144,11 @@ class ScoreFollowing(QThread):
             self.vis_spec[:, -1] = spec_frame[0].cpu().numpy()
             
             # Motif IoU
-            mean_x = np.mean(self.curr_x)
-            mean_y = np.mean(self.curr_y)
+            self.mean_x = np.mean(self.curr_x)
+            self.mean_y = np.mean(self.curr_y)
             
-            if type(mean_x) == np.float32 and type(mean_y) == np.float32:
-                mean_pos = [mean_x, mean_y, 20, 100]
+            if type(self.mean_x) == np.float32 and type(self.mean_y) == np.float32:
+                mean_pos = [self.mean_x, self.mean_y, 20, 100]
                 status, self.class_id = self.motif_iou( self.motif_label, 
                                                         mean_pos, 
                                                         self.crop_org_scores[self.actual_page].shape)
@@ -155,7 +158,7 @@ class ScoreFollowing(QThread):
             # 
             # To PyQT UI
             self.update_data.emit({"value" : 0,
-                                    "predict" : [mean_x, mean_y],
+                                    "predict" : [self.mean_x, self.mean_y],
                                     "signal": frame,
                                     "spec": self.vis_spec,
                                     "system_id": self.current_system,
@@ -175,18 +178,19 @@ class ScoreFollowing(QThread):
         idx = np.nonzero(tmp2)[0][-1]
         system_list = SCORE_HEIGHT * self.cropping_info[2][actual_page]
         # print(mask.shape, idx, self.cropping_info[2][actual_page])
-        self.current_system  = find_system_edge(idx, system_list)
-        if self.current_system == 0:
-            y1, y2 = 0, int(system_list[self.current_system])
+        self.current_system  = find_system_edge(self.mean_y, system_list)
+        last_system = find_system_edge(idx, system_list)
+        if last_system == 0:
+            y1, y2 = 0, int(system_list[last_system])
         else:
-            y1, y2 = int(system_list[self.current_system-1]), int(system_list[self.current_system])
+            y1, y2 = int(system_list[last_system-1]), int(system_list[last_system])
         # print(y1, y2)
         
         width = np.mean(np.sum(mask[y1:y2, :], axis=1))
         
 
-        if width < SCORE_WIDTH * 0.25 and self.current_system > 1:
-            y1, y2 = int(system_list[self.current_system-2]), int(system_list[self.current_system-1])
+        if width < SCORE_WIDTH * 0.25 and last_system > 1:
+            y1, y2 = int(system_list[last_system-2]), int(system_list[last_system-1])
             width = np.mean(np.sum(mask[y1:y2, :], axis=1))
         # print("!", y1, y2 , int(width),np.mean(self.curr_x), np.mean(self.curr_y), system_list)
         return [y1, y2] , width

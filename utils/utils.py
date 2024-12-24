@@ -586,7 +586,7 @@ def find_system_edge(curr_y, edge_list):
     diff_array = np.abs(edge_list - curr_y)
     
     min_diff_idx = np.argmin(diff_array)
-    
+    print(min_diff_idx)
     return  min_diff_idx
 
 def load_piece_for_inference(scale_width, mode, path, piece_name, crop_path):
