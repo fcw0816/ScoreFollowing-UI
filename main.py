@@ -221,28 +221,28 @@ class MainWindow(QMainWindow):
         directory_label.setFont(self.font)
     
         # 
-        audio_button = QPushButton("Audio Files", self)
-        audio_button.setFont(self.font2)
-        audio_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding) 
-        audio_button.clicked.connect(lambda: self.open_folder(self.audio_path_label.text()))
+        # audio_button = QPushButton("Audio Files", self)
+        # audio_button.setFont(self.font2)
+        # audio_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding) 
+        # audio_button.clicked.connect(lambda: self.open_folder(self.audio_path_label.text()))
         # Piece
-        piece_button = QPushButton("Pieces", self)
+        piece_button = QPushButton("Piece Files", self)
         piece_button.setFont(self.font2)
         piece_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding) 
         piece_button.clicked.connect(lambda: self.open_folder(self.piece_path_label.text()))
         # Save
-        save_button = QPushButton("Saved Videos", self)
-        save_button.setFont(self.font2)
-        save_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        save_button.clicked.connect(lambda: self.open_folder(self.save_path_label.text()))
+        # save_button = QPushButton("Saved Videos", self)
+        # save_button.setFont(self.font2)
+        # save_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        # save_button.clicked.connect(lambda: self.open_folder(self.save_path_label.text()))
         # 
         dirpath_hlayout = QHBoxLayout()
-        dirpath_hlayout.addWidget(audio_button)
+        # dirpath_hlayout.addWidget(audio_button)
         dirpath_hlayout.addWidget(piece_button)
-        dirpath_hlayout.addWidget(save_button)
+        # dirpath_hlayout.addWidget(save_button)
 
         
-        btn_right = QPushButton("Score Editing")
+        btn_right = QPushButton("Motif Design")
         btn_right.setStyleSheet(self.light_blue_button)
         btn_right.clicked.connect(lambda: self.change_page(self.motif_labeling_page))
         
@@ -327,7 +327,7 @@ class MainWindow(QMainWindow):
         self.list_widget.itemClicked.connect(lambda: self.update_image("labeling", self.list_widget.currentRow()))
         self.list_widget.itemClicked.connect(self.motif_naming)
         # Page Button
-        btn_right = QPushButton("Generate Masked Score")
+        btn_right = QPushButton("Score Preprocessing")
         btn_right.setStyleSheet(self.light_blue_button)
         btn_right.clicked.connect(lambda: self.change_page(self.masked_score_checking_page))
         
@@ -1136,7 +1136,7 @@ class MainWindow(QMainWindow):
         # print("crop_load", os.path.join(self.cropping_piece_path_label.text(), self.combo_box.currentText(), 'cropping.pkl'))
         with open(os.path.join(self.cropping_piece_path_label.text(), self.combo_box.currentText(), 'cropping.pkl'), 'rb') as file:
             self.croppingdata = pickle.load(file)
-            # print(self.croppingdata)
+            
     # cropping_check
     def check_image(self, origin_id, masked_id):
 
@@ -1371,12 +1371,35 @@ class MainWindow(QMainWindow):
         # progress bar
         self.sf_progress.setValue(int(data["value"]))
        
+        # motif
+        if data["motif_status"]:
+            self.motif_title.setStyleSheet("background-color: lightpink; color: black; padding: 10px; font-size: 20px; font-weight: bold; font-family: 'Arial';")
+        else:
+            self.motif_title.setStyleSheet("background-color: darkgray; color: white; padding: 10px; font-size: 20px; font-family: 'Arial';")
+        # turning
+        if data["turning"]:
+            self.turning_title.setStyleSheet("background-color: lightpink; color: black; padding: 10px; font-size: 20px; font-weight: bold; font-family: 'Arial';")
+
+        else:
+
+            self.turning_title.setStyleSheet("background-color: darkgray; color: white; padding: 10px; font-size: 20px; font-family: 'Arial';")
+        
+        # score info
+        self.info.setText(f"")
+        self.info.append(f"Masked Score Page: {data['masked_score_page']}")
+        self.info.append(f"Score Page: {data['score_page']}")
+        self.info.append(f"Score System: {data['system_id']}")
+        self.info.append(f"Motif Status: {data['motif_status']}")
+        self.info.append(f"Motif Class: {data['motif_id']}")
+        
+        
         # visualization   
         cx, cy = data["predict"]
         img_pred = cv.cvtColor(data["score"], cv.COLOR_RGB2BGR)
         maskedimg = cv.cvtColor(data["masked_score"], cv.COLOR_RGB2BGR)
         plot_box([cx - 10, cy - 50, cx + 10, cy + 50], img_pred, label=CLASS_MAPPING[0],
                         color=COLORS[0 % len(COLORS)], line_thickness=2)
+        
         for ann in self.annotations[int(data['score_page'])]:
             if ann != []:
                 ih, iw, n = img_pred.shape
@@ -1395,25 +1418,6 @@ class MainWindow(QMainWindow):
         self.plotscore(self.score_label, img)
         # print(maskedimg.shape)
         self.plotscore(self.masked_score_label, maskedimg)
-        
-        # motif
-        if data["motif_status"]:
-            self.motif_title.setStyleSheet("background-color: lightpink; color: black; padding: 10px; font-size: 20px; font-weight: bold; font-family: 'Arial';")
-        else:
-            self.motif_title.setStyleSheet("background-color: darkgray; color: white; padding: 10px; font-size: 20px; font-family: 'Arial';")
-        # turning
-        if data["turning"]:
-            self.turning_title.setStyleSheet("background-color: lightpink; color: black; padding: 10px; font-size: 20px; font-weight: bold; font-family: 'Arial';")
-        else:
-            self.turning_title.setStyleSheet("background-color: darkgray; color: white; padding: 10px; font-size: 20px; font-family: 'Arial';")
-        
-        # score info
-        self.info.setText(f"")
-        self.info.append(f"Masked Score Page: {data['masked_score_page']}")
-        self.info.append(f"Score Page: {data['score_page']}")
-        self.info.append(f"Score System: {data['system_id']}")
-        self.info.append(f"Motif Status: {data['motif_status']}")
-        self.info.append(f"Motif Class: {data['motif_id']}")
         
         # video 
         self.save_video.append(img)

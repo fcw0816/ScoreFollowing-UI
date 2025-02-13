@@ -307,13 +307,14 @@ class RepeatCropping():
             
             h, w, n = image.shape
             # print( h, w, n )
-            # left top
+            # Image
             image = cv.rectangle(image, (0, 0), (w, int((ys-hs/2) * h)-offset), (255, 255, 255), -1)
             image = cv.rectangle(image, (0, 0), (int((xs-ws/2) * w), int((ys+hs/2) * h)+offset), (255, 255, 255), -1)
             
             image = cv.rectangle(image, (0, int((ye+he/2) * h)+offset), (w, h), (255, 255, 255), -1)
-            image = cv.rectangle(image, (int((xe+we/2) * w), int((ye-he/2) * h)-offset), (w,  h), (255, 255, 255), -1)
+            # image = cv.rectangle(image, (int((xe+we/2) * w), int((ye-he/2) * h)-offset), (w,  h), (255, 255, 255), -1)
             
+            # Mask
             score_h = int((ys - hs / 2) * h) - offset if int((ys - hs / 2) * h) - offset > 0 else 0
             score_w = w
         
@@ -343,18 +344,20 @@ class RepeatCropping():
                 score_w2 = int((xskip + wskip / 2) * w) if int((xskip + wskip / 2) * w) > 0 else 0
                 scoremask[score_h1:score_h2 , score_w1:score_w2] = 0
             
-            # plt.imshow(scoremask)
-            # plt.show()
-            # print(page, scoremask)
-            scoremask_list.append([page, scoremask])
-            # print(scoremask.shape, type(scoremask), scoremask)
-            # plt.imshow(scoremask, cmap="gray")
-            # plt.show()
-            # input()
-            # print(start, end, image.shape)
-            # h, w, n = 
-            # image = cv.resize(image, (600, 800))
             
+            # page turning threshold
+            thx = int((xe+we/2) * w)
+            # print(p)
+            idy = np.argmin(abs(self.edge[page] - (ye+he/2)))
+            if idy == 0:
+                thy = [0, int(self.edge[page][idy] * h)] 
+            else:
+                thy = [int(self.edge[page][idy-1] * h), int(self.edge[page][idy] * h)] 
+                
+            # print(self.edge, (ye+he/2), threshold)
+            
+            
+            scoremask_list.append([page, scoremask, [thx, thy]])
             # cv.imshow("masked_img", image)
             if self.save != None:
                 

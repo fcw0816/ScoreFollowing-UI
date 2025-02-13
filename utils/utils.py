@@ -364,6 +364,7 @@ class LogarithmicFilterbank(Filterbank):
                                            overlap=True)
         # create a LogarithmicFilterbank from the filters
         obj = cls.from_filters(filters, bin_frequencies)
+        print(obj.shape)
         # set additional attributes
         obj.fref = fref
         obj.num_bands_per_octave = num_bands_per_octave
@@ -520,6 +521,7 @@ def frequencies2bins(frequencies, bin_frequencies, unique_bins=False):
     if unique_bins:
         indices = np.unique(indices)
     # return the (unique) bin indices of the closest matches
+    # print(indices, len(indices))
     return indices
         
 def bins2frequencies(bins, bin_frequencies):
@@ -558,21 +560,24 @@ def log_frequencies(bands_per_octave, fmin, fmax, fref=A4):
     # get the range
     left = np.floor(np.log2(float(fmin) / fref) * bands_per_octave)
     right = np.ceil(np.log2(float(fmax) / fref) * bands_per_octave)
+    # print(left, right)
     # generate frequencies
     frequencies = fref * 2. ** (np.arange(left, right) /
                                 float(bands_per_octave))
+    # print(frequencies, len(frequencies))
     # filter frequencies
     # needed, because range might be bigger because of the use of floor/ceil
     frequencies = frequencies[np.searchsorted(frequencies, fmin):]
     frequencies = frequencies[:np.searchsorted(frequencies, fmax, 'right')]
+    # print(frequencies, len(frequencies))
     # return
     return frequencies
 ################################################
 
 SCORE_WIDTH = 835
 SCORE_HEIGHT = 1181
-PAGE_TURNING_THRESHOLD = 0.75
-COOLDOWN = 40
+PAGE_TURNING_THRESHOLD = 0.8
+COOLDOWN = 20
 
 SAMPLE_RATE = 22050
 FRAME_SIZE = 2048
@@ -586,7 +591,7 @@ def find_system_edge(curr_y, edge_list):
     diff_array = np.abs(edge_list - curr_y)
     
     min_diff_idx = np.argmin(diff_array)
-    print(min_diff_idx)
+    # print(min_diff_idx)
     return  min_diff_idx
 
 def load_piece_for_inference(scale_width, mode, path, piece_name, crop_path):
@@ -607,14 +612,9 @@ def load_piece_for_inference(scale_width, mode, path, piece_name, crop_path):
     score = np.stack(scaled_score)
 
     org_scores_rgb = []
-    org_system_ys = []
     for org_score in org_scores:
         org_score = cv.cvtColor(np.array(org_score, dtype=np.float32) / 255. , cv.COLOR_GRAY2BGR)
-        # if mode == "fullpage":
-        #     # print("#", org_score.shape, org_scores.shape)
-        #     org_system_ys.append(find_system_ys(org_score))
-        # else:
-        #     org_system_ys.append(find_system_ys(org_score[:, :org_score.shape[1]//2]))
+
         org_scores_rgb.append(org_score)
     
     crop_scores = 1 - np.array(crop_padded_scores, dtype=np.float32) / 255.
@@ -629,21 +629,15 @@ def load_piece_for_inference(scale_width, mode, path, piece_name, crop_path):
 
     
     crop_org_scores_rgb = []
-    crop_system_ys = []
+
     for crop_org_score in crop_org_scores:
         crop_org_score = cv.cvtColor(np.array(crop_org_score, dtype=np.float32) / 255., cv.COLOR_GRAY2BGR)
-        # if mode == "fullpage":
-        #     # print("!", crop_org_score.shape, crop_org_scores.shape)
-        #     crop_system_ys.append(find_system_ys(crop_org_score))
-        # else:
-        #     crop_system_ys.append(find_system_ys(crop_org_score[:, :crop_org_score.shape[1]//2]))
+
         crop_org_scores_rgb.append(crop_org_score)
         
     if mode == "fullpage": 
-        # print(scores[0].shape)
         scale_factor = scores[0].shape[0] / scale_width
     else:
-        # print(crop_scores[0].shape)
         scale_factor = crop_scores[0].shape[1] / scale_width
 
     return org_scores_rgb, score, crop_org_scores_rgb, crop_score, pad, scale_factor
@@ -656,12 +650,11 @@ def load_piece(path, piece_name, crop_path):
     l = os.listdir(image_path)
     l = natsorted(l)
     for i in l:
-        # print(i)
+
         path = os.path.join(image_path, i)
         image = cv.imread(path)
         image = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
-        # # cv.imshow("1", image)
-        # # cv.waitKey(0)
+
         images.append(image)
         images_path.append(path)
     images = np.array(images)
@@ -677,9 +670,7 @@ def load_piece(path, piece_name, crop_path):
     dim_diff = np.abs(h - w)
     pad1, pad2 = dim_diff // 2, dim_diff - dim_diff // 2
 
-    # Determine padding
     pad = ((0, 0), (0, 0), (pad1, pad2))
-    # print(image.shape)
     # Add padding
     padded_scores = np.pad(images, pad, mode="constant", constant_values=255)
 
@@ -691,11 +682,8 @@ def load_piece(path, piece_name, crop_path):
         # print(i)
         if i.endswith(".jpg"):
             path = os.path.join(cropimage_path, i)
-            # print(path)
             image = cv.imread(path)
             image = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
-            # cv.imshow("1", image)
-            # cv.waitKey(0)
             crop_images.append(image)
     crop_images = np.array(crop_images)
     

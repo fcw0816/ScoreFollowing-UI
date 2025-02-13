@@ -40,6 +40,7 @@ class LogSpectrogram(nn.Module):
         fbank = LogarithmicFilterbank(fft_frequencies(self.n_fft // 2 + 1, self.sr),
                                       num_bands=12, fmin=60, fmax=6000, norm_filters=True, unique_filters=False)
         fbank = torch.from_numpy(fbank)
+        # print(fbank.shape)
         phase_advance = torch.linspace(0, math.pi * self.hop_length, 1025)[..., None]
 
 

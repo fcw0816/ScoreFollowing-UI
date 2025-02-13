@@ -47,12 +47,12 @@ class ScoreFollowing(QThread):
         
         
         self.actual_page = 0
-        self.current_system = 0
         
         # audio file or stream
         self.audio_stream = AudioStream(SAMPLE_RATE, HOP_SIZE*2, self.audio_path)
             
         # autopageturning
+        self.flag = False
         self.th_len = 5
         self.curr_y = deque(np.zeros(self.th_len), maxlen=self.th_len)
         self.curr_x = deque(np.zeros(self.th_len), maxlen=self.th_len)
@@ -84,9 +84,6 @@ class ScoreFollowing(QThread):
             self.count = 0
        
     def run(self):
-        
-        # if self.audio_path:
-        #     pbar = tqdm(total=len(self.audio_stream))
 
         while not self.is_piece_end:
             
@@ -100,16 +97,14 @@ class ScoreFollowing(QThread):
             with torch.no_grad():
 
                 sig_excerpt = torch.from_numpy(np.array(self.signal, dtype=np.float64)).float().to(self.device)
-                # plt.plot(list(signal))
+
                 spec_frame = self.network.compute_spec([sig_excerpt], tempo_aug=False)[0]
 
                 z, self.hidden = self.network.conditioning_network.get_conditioning(spec_frame, hidden=self.hidden)
     
                 t = self.score_tensor[self.actual_page:self.actual_page+1]
           
-                # t[:, :, 200:,  :] = 0
                 inference_out, pred = self.network.predict(t, z)
-                # print(score_tensor[actual_page:actual_page+1].shape, org_scores[actual_page].shape)
 
             x1, y1, x2, y2 = [], [], [], []
             filtered_inference_out = inference_out[0, inference_out[0, :, -1] == self.class_idx].unsqueeze(0)
@@ -153,80 +148,64 @@ class ScoreFollowing(QThread):
                                                         mean_pos, 
                                                         self.crop_org_scores[self.actual_page].shape)
             else:
-            # print(mean_pos)
                 status, self.class_id = False, "None"
-            # 
             # To PyQT UI
             self.update_data.emit({"value" : 0,
                                     "predict" : [self.mean_x, self.mean_y],
                                     "signal": frame,
                                     "spec": self.vis_spec,
-                                    "system_id": self.current_system,
+                                    "system_id": self.current_system(),
                                     "motif_status": status,
                                     "motif_id": self.class_id,
                                     "score_page": self.cropping_info[0][self.actual_page][0],
                                     "masked_score_page": self.actual_page, 
-                                    "turning": self.cooldown != 0,
+                                    "turning": self.flag,
                                     "masked_score": self.crop_org_scores[self.actual_page][::2, ::2, :],
                                     "score": self.org_scores[self.cropping_info[0][self.actual_page][0]]})
 
-    def find_last_system(self):
-
-        mask = self.cropping_info[0][self.actual_page][-1]
+    def current_system(self):
         actual_page = self.cropping_info[0][self.actual_page][0] 
-        tmp2 = np.sum(mask, axis=1)
-        idx = np.nonzero(tmp2)[0][-1]
         system_list = SCORE_HEIGHT * self.cropping_info[2][actual_page]
-        # print(mask.shape, idx, self.cropping_info[2][actual_page])
-        self.current_system  = find_system_edge(self.mean_y, system_list)
-        last_system = find_system_edge(idx, system_list)
-        if last_system == 0:
-            y1, y2 = 0, int(system_list[last_system])
-        else:
-            y1, y2 = int(system_list[last_system-1]), int(system_list[last_system])
-        # print(y1, y2)
+        last_system = find_system_edge(self.mean_y, system_list)
         
-        width = np.mean(np.sum(mask[y1:y2, :], axis=1))
-        
+        return last_system
 
-        if width < SCORE_WIDTH * 0.25 and last_system > 1:
-            y1, y2 = int(system_list[last_system-2]), int(system_list[last_system-1])
-            width = np.mean(np.sum(mask[y1:y2, :], axis=1))
-        # print("!", y1, y2 , int(width),np.mean(self.curr_x), np.mean(self.curr_y), system_list)
-        return [y1, y2] , width
-            
     def autopageturning(self):
-        
-        
         in_last_system = False
         in_range = False
         
-        system_ys, width = self.find_last_system()
-        # if self.class_idx == 0:
-        in_range = width > np.mean(self.curr_x) > PAGE_TURNING_THRESHOLD * width
-        # else:
-        #     in_range = width > np.mean(self.curr_x) > PAGE_TURNING_THRESHOLD2 * width
-        in_last_system = system_ys[0] <= np.mean(self.curr_y) <= system_ys[1]
-
-        
         if self.actual_page + 1 < self.score_tensor.shape[0]:
             
-            if in_last_system and in_range and self.cooldown == 0 :
-                print("Turning...", self.actual_page, self.cropping_info[0][self.actual_page][0])
-                print(np.mean(self.curr_x), np.mean(self.curr_y),  PAGE_TURNING_THRESHOLD * width)
-                # print(len(self.crop_org_scores))
-                # print(self.crop_org_scores[self.actual_page].shape)
-                # print(self.motif_label)
+            thx = self.cropping_info[0][self.actual_page][-1][0]
+            thy = self.cropping_info[0][self.actual_page][-1][1]
+            # system_ys, width = self.find_last_system()
+            in_last_system = thy[0] <= np.mean(self.curr_y) <= thy[1]
+            in_range = np.mean(self.curr_x) > PAGE_TURNING_THRESHOLD * SCORE_WIDTH or np.mean(self.curr_x) > thx
+            
+            
+            if in_last_system:
                 
-                self.cooldown = COOLDOWN
-                self.hidden = None
-                self.curr_y = deque(np.zeros(self.th_len), maxlen=self.th_len)
-                self.curr_x = deque(np.zeros(self.th_len), maxlen=self.th_len)
-                self.actual_page += 1
+                if in_range and self.cooldown >= COOLDOWN:
+                    print("Turning...", self.actual_page, self.cropping_info[0][self.actual_page][0])
+                    
+                    self.hidden = None
+                    self.curr_y = deque(np.zeros(self.th_len), maxlen=self.th_len)
+                    self.curr_x = deque(np.zeros(self.th_len), maxlen=self.th_len)
+                    self.actual_page += 1
+                    self.flag = True
+                    
+                # elif self.cooldown == COOLDOWN:
+                #     self.cooldown -= COOLDOWN
+                else:
+                    self.cooldown += 1
+                    # print(self.cooldown, np.mean(self.curr_x), np.mean(self.curr_y), thx, thy)
         
-        if self.cooldown > 0 :
-            self.hidden = None
-            self.cooldown -= 1
+            elif self.cooldown > 0 :
+                
+                self.cooldown -= 1
+            
+            if self.cooldown <= 0:
+                self.flag = False
               
     def stop_playing(self):
         self.is_piece_end = True
