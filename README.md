@@ -21,16 +21,4 @@ pip install -r requirements.txt
 python main.py
 ```
 
-## Usage Example
 
-### Motif Labeling
-<!-- ![Labeling](Motif Labelin.gif) -->
-### Score Cropping
-<!-- ![Labeling](Masked Score Adjusting.gif) -->
-
-### Score Following
-<!-- ![123](image.png) -->
-## Acknowledgments
-*
-
-## Contact
