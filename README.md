@@ -1,8 +1,5 @@
 # Score Following System
 
-## Description
-This project is designed to solve ...
-
 ## Installation
 To set up this project, follow these steps:
 
